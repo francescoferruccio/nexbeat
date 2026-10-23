@@ -34,6 +34,10 @@ const albumPage: AlbumPageData = {
 
 /** Real local backend/session; only catalogue and integration data are simulated. */
 async function fixtures(page: Page) {
+  const health = await page.request.get('/api/health')
+  expect(health.ok()).toBeTruthy()
+  const { version } = await health.json()
+  expect(version).toEqual(expect.any(String))
   const responses: Record<string, unknown> = {
     '/api/discover': {
       rows: [
@@ -65,7 +69,7 @@ async function fixtures(page: Page) {
     if (pathname in responses) return route.fulfill({ json: responses[pathname] })
     if (pathname === '/api/auth/me' && route.request().method() === 'GET') {
       const response = await route.fetch()
-      return route.fulfill({ json: { ...await response.json(), seen_version: '1.4.1' } })
+      return route.fulfill({ json: { ...await response.json(), seen_version: version } })
     }
     if (pathname === '/api/settings' && route.request().method() === 'GET') {
       const response = await route.fetch()
