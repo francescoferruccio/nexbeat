@@ -89,7 +89,7 @@ export function ThemeSwitcher() {
           title={label}
           aria-label={label}
           className={
-            'rounded-full p-1.5 transition-colors ' +
+            'inline-flex items-center justify-center rounded-full p-1.5 transition-colors ' +
             (theme === value ? 'bg-accent-500 text-white' : 'text-mist-500 hover:text-mist-100')
           }
         >
