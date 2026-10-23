@@ -36,7 +36,7 @@ export function AppShell() {
     <div className="nv-glow flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 border-b border-ink-700/80 bg-ink-950/80 backdrop-blur-xl">
         <LoadingBar />
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 max-md:flex-wrap sm:gap-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 sm:gap-4 sm:px-6">
           <NavLink to="/" className="shrink-0" aria-label={t('nav.home')}>
             <Logo withWordmark />
           </NavLink>
@@ -48,7 +48,7 @@ export function AppShell() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <ThemeSwitcher />
+            <ThemeSwitcher compact />
             <LanguageSwitcher />
             <UserMenu />
           </div>

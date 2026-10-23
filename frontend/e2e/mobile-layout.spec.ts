@@ -34,6 +34,10 @@ const albumPage: AlbumPageData = {
 
 /** Real local backend/session; only catalogue and integration data are simulated. */
 async function fixtures(page: Page) {
+  const health = await page.request.get('/api/health')
+  expect(health.ok()).toBeTruthy()
+  const { version } = await health.json()
+  expect(version).toEqual(expect.any(String))
   const responses: Record<string, unknown> = {
     '/api/discover': {
       rows: [
@@ -65,7 +69,7 @@ async function fixtures(page: Page) {
     if (pathname in responses) return route.fulfill({ json: responses[pathname] })
     if (pathname === '/api/auth/me' && route.request().method() === 'GET') {
       const response = await route.fetch()
-      return route.fulfill({ json: { ...await response.json(), seen_version: '1.4.1' } })
+      return route.fulfill({ json: { ...await response.json(), seen_version: version } })
     }
     if (pathname === '/api/settings' && route.request().method() === 'GET') {
       const response = await route.fetch()
@@ -99,6 +103,20 @@ async function checkLayout(page: Page, mobile: boolean) {
   })
   expect(outside).toEqual([])
   if (mobile) {
+    const header = page.locator('header')
+    const logoBox = await header.locator('a').first().boundingBox()
+    expect(logoBox).not.toBeNull()
+    const controls = await header.locator('button').evaluateAll((elements) => elements
+      .filter((element) => element.getClientRects().length)
+      .map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { label: element.getAttribute('aria-label') ?? element.textContent, centerY: rect.y + rect.height / 2 }
+      }))
+    // One theme toggle, both languages and the user menu must share the logo's row.
+    expect(controls).toHaveLength(4)
+    for (const control of controls) {
+      expect(Math.abs(control.centerY - logoBox!.y - logoBox!.height / 2), `${control.label} must stay in the first header row`).toBeLessThan(1)
+    }
     const smallTargets = await page.locator('button, a[href], input[type="checkbox"]').evaluateAll((elements) => elements.flatMap((element) => {
       if (!element.getClientRects().length) return []
       // Footer and links embedded in text keep the surrounding line height.
@@ -133,6 +151,31 @@ async function checkLayout(page: Page, mobile: boolean) {
       .map((element) => element.outerHTML))
     expect(smallInputs).toEqual([])
   }
+}
+
+for (const width of [360, 412]) {
+  test(`mobile header at ${width}px with 115% text`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 915 })
+    await fixtures(page)
+    await page.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        document.documentElement.style.fontSize = '115%'
+      }, { once: true })
+    })
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await expect(page.locator('html')).toHaveCSS('font-size', '18.4px')
+    await checkLayout(page, true)
+
+    const header = page.locator('header')
+    await header.getByRole('button', { name: 'Hell', exact: true }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+    await checkLayout(page, true)
+    await header.getByRole('button', { name: 'Dunkel', exact: true }).click()
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', 'light')
+    await header.locator('button[aria-haspopup="menu"]').click()
+    await expect(header.getByRole('menu')).toBeVisible()
+  })
 }
 
 const routes = [
