@@ -74,17 +74,18 @@
     min-height: 100dvh;
   }
 
-  /* Keep compact desktop controls, with a 44px touch area on phones. */
+  /* Keep compact desktop controls, with a 44px touch area on phones.
+     Footer and inline text links retain their natural text layout. */
   @media (width < 48rem) {
     button,
-    a[href],
+    a[href]:not(:where(footer *, p *, dd *, span *)),
     input:not([type='checkbox']),
     select {
       min-height: 2.75rem;
       min-width: 2.75rem;
     }
 
-    a[href] {
+    a[href]:not(:where(footer *, p *, dd *, span *)) {
       display: inline-flex;
     }
   }

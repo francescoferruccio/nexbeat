@@ -101,11 +101,31 @@ async function checkLayout(page: Page, mobile: boolean) {
   if (mobile) {
     const smallTargets = await page.locator('button, a[href], input[type="checkbox"]').evaluateAll((elements) => elements.flatMap((element) => {
       if (!element.getClientRects().length) return []
+      // Footer and links embedded in text keep the surrounding line height.
+      if (element.matches('footer a, p a, dd a, span a')) return []
       const target = element instanceof HTMLInputElement ? element.closest('label') ?? element : element
       const rect = target.getBoundingClientRect()
       return rect.width < 44 || rect.height < 44 ? [`${element.tagName}: ${element.textContent?.trim()} (${rect.width}×${rect.height})`] : []
     }))
     expect(smallTargets).toEqual([])
+    const footer = page.locator('footer')
+    const about = footer.locator('a[href="/ueber"]').first()
+    const version = footer.locator('.tabular-nums')
+    const aboutBox = await about.boundingBox()
+    const versionBox = await version.boundingBox()
+    expect(aboutBox).not.toBeNull()
+    expect(versionBox).not.toBeNull()
+    expect(aboutBox!.height).toBeLessThan(44)
+    expect(Math.abs(aboutBox!.y + aboutBox!.height / 2 - versionBox!.y - versionBox!.height / 2)).toBeLessThan(1)
+    const inlineLinks = await page.locator('p a[href], dd a[href], span a[href]').evaluateAll((elements) => elements.map((element) => {
+      const style = getComputedStyle(element)
+      return { display: style.display, minHeight: style.minHeight, minWidth: style.minWidth }
+    }))
+    for (const style of inlineLinks) {
+      expect(style.display).toBe('inline')
+      expect(style.minHeight).not.toBe('44px')
+      expect(style.minWidth).not.toBe('44px')
+    }
   }
   if (page.viewportSize()!.width < 640) {
     const smallInputs = await page.locator('input:not([type="checkbox"]), select, textarea').evaluateAll((elements) => elements
